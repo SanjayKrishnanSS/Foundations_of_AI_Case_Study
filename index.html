@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDS Playground</title>
+<style>
+:root {
+  --site-primary: #183b63;
+  --site-secondary: #e3edf5;
+  --site-background: #f4f6f8;
+  --site-on-primary: #ffffff;
+  --site-on-secondary: #173b83;
+  --site-on-background: #17233d;
+  --site-font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-font-heading: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: var(--site-background); color: var(--site-on-background); }
+.app { min-height: 100vh; width: 100%; background-color: light-dark(var(--site-background), #111827); color: light-dark(var(--site-on-background), #e5eaf5); }
+header { background: linear-gradient(115deg, #142f4d, #245778); color: var(--site-on-primary); padding: calc(38px * var(--site-spacing-scale)) max(22px, calc((100vw - 1180px)/2)); position: relative; overflow: hidden; border-bottom: 4px solid #8bb6c9; }
+header:after { content:""; position:absolute; width:300px; height:300px; border:1px solid rgba(255,255,255,.18); border-radius:50%; right:8%; top:-190px; box-shadow:0 0 0 35px rgba(255,255,255,.04),0 0 0 75px rgba(255,255,255,.03); opacity:var(--site-decoration-opacity); pointer-events:none; }
+.eyebrow { text-transform:uppercase; letter-spacing:.13em; font-size:.72rem; font-weight:800; opacity:.82; }
+h1 { font-family:var(--site-font-heading); font-size:calc(2.5rem * var(--site-heading-scale)); line-height:1.08; margin:10px 0; letter-spacing:-.045em; }
+header p { max-width:720px; line-height:1.6; margin:0; color:#e3ebff; }
+main { max-width:1240px; margin:0 auto; padding:30px 22px 64px; }
+.panel { background:light-dark(#fff,#1b2638); border:1px solid light-dark(#dce3eb,#334155); border-radius:calc(14px * var(--site-radius-scale)); padding:22px; box-shadow:0 5px 18px rgba(20,40,80,.04); }
+.top-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(270px,.8fr); gap:18px; align-items:stretch; }
+.section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 14px; }
+h2 { font-size:calc(1.18rem * var(--site-heading-scale)); margin:0; letter-spacing:-.02em; }
+h3 { font-size:1rem; margin:0 0 10px; }
+.muted { color:light-dark(#64748b,#a9b7cb); }
+.small { font-size:.84rem; line-height:1.5; }
+.pill { border-radius:6px; background:var(--site-secondary); color:var(--site-on-secondary); font-size:.72rem; font-weight:800; padding:6px 10px; white-space:nowrap; letter-spacing:.02em; }
+.tree-wrap { width:100%; overflow:auto; background:light-dark(#f8faff,#121c2c); border-radius:13px; border:1px solid light-dark(#e7edf7,#344256); }
+.tree-panel.expanded { position:fixed; inset:12px; z-index:1000; display:flex; flex-direction:column; overflow:hidden; background:light-dark(#fff,#1b2638); }
+.tree-panel.expanded .tree-wrap { flex:1; min-height:0; }
+.tree-panel.expanded .tree-wrap svg { min-height:100%; }
+.tree-zoom-controls { display:none; align-items:center; gap:6px; }
+.tree-panel.expanded .tree-zoom-controls { display:flex; }
+.tree-zoom-controls button { min-width:38px; padding:8px 11px; }
+.tree-zoom-level { min-width:48px; text-align:center; font-size:.78rem; font-weight:750; color:light-dark(#52627a,#c4d0e0); }
+.tree-panel.expanded .tree-help { display:none; }
+body.tree-expanded { overflow:hidden; }
+svg { display:block; width:100%; height:auto; min-height:250px; }
+.edge { stroke:light-dark(#a9b8d0,#53647e); stroke-width:2.2; }
+.node circle { fill:light-dark(#fff,#26364d); stroke:light-dark(#8194b2,#7186a8); stroke-width:2.2; transition:fill .18s,stroke .18s; }
+.node text { fill:light-dark(#1c2c49,#edf3ff); font-size:14px; font-weight:800; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+.node.visited circle { fill:#dbeafe; stroke:#2563eb; stroke-width:3; }
+.node.current circle { fill:#fef3c7; stroke:#d97706; stroke-width:4; }
+.node.found circle { fill:#bbf7d0; stroke:#16a34a; stroke-width:4; }
+.node.goal text { font-size:12px; }
+.legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:.78rem; color:light-dark(#59677d,#b5c2d5); }
+.legend span { display:flex; align-items:center; gap:6px; }
+.dot { width:10px; height:10px; border-radius:50%; border:2px solid #8194b2; background:white; }
+.dot.active { background:#fef3c7; border-color:#d97706; }
+.dot.done { background:#dbeafe; border-color:#2563eb; }
+.dot.goal { background:#bbf7d0; border-color:#16a34a; }
+.controls { display:grid; gap:15px; }
+.control-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+label { font-weight:700; font-size:.9rem; }
+select, input[type=range] { width:100%; }
+select { padding:10px 12px; border:1px solid light-dark(#cbd5e1,#52627a); border-radius:10px; background:light-dark(#fff,#142033); color:inherit; font:inherit; }
+input[type=range] { accent-color:var(--site-primary); }
+button { border:0; cursor:pointer; border-radius:10px; padding:10px 14px; font:inherit; font-weight:750; transition:transform .12s, opacity .12s; }
+button:hover { transform:translateY(-1px); }
+button:disabled { opacity:.42; cursor:not-allowed; transform:none; }
+.primary { background:var(--site-primary); color:white; }
+.secondary { background:var(--site-secondary); color:var(--site-on-secondary); }
+.ghost { background:light-dark(#eef2f8,#2a3a51); color:inherit; }
+.button-row { display:flex; flex-wrap:wrap; gap:8px; }
+.status { border-radius:12px; background:light-dark(#f0f5ff,#172b49); border:1px solid light-dark(#d8e5ff,#334d75); padding:12px; min-height:74px; }
+.status strong { display:block; margin-bottom:4px; }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.metric { padding:12px; border-radius:12px; background:light-dark(#f6f8fc,#142033); border:1px solid light-dark(#e6ebf3,#334155); }
+.metric b { display:block; font-size:1.35rem; letter-spacing:-.04em; }
+.metric span { color:light-dark(#64748b,#a9b7cb); font-size:.72rem; }
+.lower-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+.log { max-height: min(55vh, 560px); overflow:auto; display:flex; flex-direction:column; gap:6px; }
+.log-item { display:flex; gap:10px; align-items:flex-start; font-size:.83rem; padding:7px 9px; background:light-dark(#f7f9fc,#142033); border-radius:8px; }
+.log-item .n { font-weight:850; color:var(--site-primary); min-width:22px; }
+.tabs { display:flex; gap:6px; margin:12px 0; }
+.tab { background:light-dark(#edf1f7,#29384d); color:inherit; padding:8px 12px; }
+.tab.active { background:var(--site-primary); color:white; }
+pre { margin:0; padding:15px; overflow:auto; background:light-dark(#101a2c,#0c1422); color:#e5edff; border-radius:12px; font-size:.78rem; line-height:1.55; white-space:pre; }
+.code-note { margin-top:10px; font-size:.82rem; color:light-dark(#64748b,#a9b7cb); }
+.analysis-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.analysis-card { background:light-dark(#f7f9fd,#142033); border:1px solid light-dark(#e6ebf3,#334155); border-radius:12px; padding:14px; }
+.formula { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:light-dark(#eaf0ff,#263b5c); color:light-dark(#173b83,#dce8ff); padding:8px 10px; border-radius:8px; display:inline-block; margin:5px 0; font-size:.88rem; }
+footer { text-align:center; padding:18px; color:light-dark(#64748b,#9aabc2); font-size:.78rem; }
+@media(max-width:850px){.top-grid,.lower-grid{grid-template-columns:1fr}.analysis-grid{grid-template-columns:1fr}.top-grid .panel:first-child{min-height:0}}
+@media(max-width:520px){header{padding:24px 18px}h1{font-size:2rem}main{padding:16px 12px 36px}.panel{padding:15px}.metrics{grid-template-columns:repeat(3,1fr)}.metric{padding:9px}.metric b{font-size:1.15rem}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="eyebrow">Algorithm exploration · Search methods</div>
+  <h1>Iterative Deepening Search</h1>
+  <p>An interactive environment for exploring, testing and understanding Iterative Deepening Search. Configure a goal, follow each depth-limited pass, and inspect the algorithm's behaviour and implementation.</p>
+</header>
+<main>
+  <div class="top-grid">
+    <section class="panel tree-panel" id="treePanel">
+      <div class="section-title"><h2>Search tree</h2><div class="button-row" style="align-items:center"><span class="pill" id="iterationPill">Iteration 1 · Limit 0</span><button class="ghost" id="fitTreeBtn" title="Fit the search tree in its available area">Fit</button><div class="tree-zoom-controls" aria-label="Tree zoom controls"><button class="ghost" id="zoomOutBtn" aria-label="Zoom out">−</button><span class="tree-zoom-level" id="zoomLevel">100%</span><button class="ghost" id="zoomInBtn" aria-label="Zoom in">+</button></div><button class="secondary" id="expandTreeBtn" aria-expanded="false">⛶ Expand</button></div></div>
+      <div class="tree-wrap">
+        <svg id="treeSvg" viewBox="0 0 700 330" role="img" aria-label="Search tree with nodes A through G"></svg>
+      </div>
+      <div class="legend">
+        <span><i class="dot"></i> Not visited</span><span><i class="dot active"></i> Current node</span><span><i class="dot done"></i> Visited</span><span><i class="dot goal"></i> Goal found</span>
+      </div>
+      <p class="small muted tree-help" style="margin:12px 0 0">Demonstration graph · A is the start node. Children are explored from left to right. Use the controls to change the goal.</p>
+    </section>
+    <aside class="panel controls">
+      <div class="section-title"><h2>Configure search</h2><span class="pill">Depth-limited DFS</span></div>
+      <div>
+        <div class="control-row"><label for="goalSelect">Goal node</label><span class="small muted">Choose target</span></div>
+        <select id="goalSelect"><option value="G" selected>G</option><option value="D">D</option><option value="E">E</option><option value="F">F</option><option value="C">C</option></select>
+      </div>
+      <div style="border-top:1px solid light-dark(#e6ebf3,#334155);padding-top:14px">
+        <label style="display:flex;align-items:center;gap:9px"><input id="customTreeToggle" type="checkbox" style="width:auto"> Generate a tree with custom levels</label>
+        <div id="customTreeOptions" hidden style="margin-top:12px">
+          <div class="control-row"><label for="treeLevels">Number of tree levels</label><span class="small muted">Root included</span></div>
+          <select id="treeLevels"><option value="2">2 levels</option><option value="3" selected>3 levels (default)</option><option value="4">4 levels</option><option value="5">5 levels</option><option value="6">6 levels</option></select>
+          <p class="small muted" style="margin:7px 0 0">Creates a full binary demonstration tree. The search controls and step-by-step process remain the same.</p>
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="primary" id="playBtn">▶ Play</button>
+        <button class="secondary" id="stepBtn">Next step</button>
+        <button class="ghost" id="resetBtn">↺ Reset</button>
+      </div>
+      <div class="status" aria-live="polite"><strong id="statusTitle">Ready to search</strong><span id="statusText" class="small">Press Play or Next step to begin with depth limit 0.</span></div>
+      <div class="metrics">
+        <div class="metric"><b id="expandedMetric">0</b><span>Nodes visited</span></div>
+        <div class="metric"><b id="iterationMetric">0</b><span>Iterations</span></div>
+        <div class="metric"><b id="depthMetric">—</b><span>Current limit</span></div>
+      </div>
+      <div class="small muted">The visited-node count includes revisits across iterations, because IDS starts again at the root each time.</div>
+    </aside>
+  </div>
+  <div class="lower-grid">
+    <section class="panel">
+      <div class="section-title"><h2>Search trace</h2><span class="small muted" id="traceCount">0 events</span></div>
+      <div class="log" id="log"><div class="muted small">Your search events will appear here.</div></div>
+    </section>
+    <section class="panel">
+      <h2>Method overview</h2>
+      <p class="small muted">Iterative Deepening Search repeatedly runs depth-limited DFS. After each unsuccessful pass, it increases the depth limit by one and searches again from the root.</p>
+      <ol class="small" style="padding-left:20px;line-height:1.7">
+        <li>Begin with depth limit 0.</li>
+        <li>Run depth-first search, but do not expand nodes at the limit.</li>
+        <li>If the goal is not found, increase the limit by one.</li>
+        <li>Restart from the root and repeat until the goal is found.</li>
+      </ol>
+      <div class="formula">limit = 0, 1, 2, 3, ...</div>
+      <p class="small"><b>Key idea:</b> shallow nodes are revisited, but most nodes in a large tree are near the deepest level, so this repeated work is often acceptable.</p>
+    </section>
+  </div>
+  <section class="panel" style="margin-top:18px">
+    <div class="section-title"><h2>Algorithm implementation</h2><span class="pill">Recursive IDS</span></div>
+    <div class="tabs"><button class="tab active" data-lang="algorithm">Algorithm</button><button class="tab" data-lang="java">Java</button><button class="tab" data-lang="python">Python</button></div>
+    <pre id="codeBlock"></pre>
+    <p class="code-note">The implementations below use a general tree represented as an adjacency list. They return as soon as the goal is found.</p>
+  </section>
+  <section class="panel" style="margin-top:18px">
+    <div class="section-title"><h2>Complexity and properties</h2><span class="pill">Technical reference</span></div>
+    <div class="analysis-grid">
+      <div class="analysis-card"><h3>Time complexity</h3><div class="formula">O(b<sup>d</sup>)</div><p class="small muted">For branching factor b and shallowest goal depth d. Nodes near the bottom dominate the total work.</p></div>
+      <div class="analysis-card"><h3>Space complexity</h3><div class="formula">O(bd)</div><p class="small muted">Depth-first traversal stores the current path and a limited set of unexplored siblings.</p></div>
+      <div class="analysis-card"><h3>Completeness</h3><div class="formula">Yes*</div><p class="small muted">Complete when the branching factor is finite and a solution exists at a finite depth.</p></div>
+    </div>
+    <div style="margin-top:14px">
+      <h3>Advantages</h3>
+      <ul class="small muted" style="line-height:1.7"><li>Finds a shallowest-depth solution when all step costs are equal.</li><li>Uses much less memory than breadth-first search on large trees.</li><li>Does not require knowing the solution depth in advance.</li></ul>
+      <h3 style="margin-top:14px">Limitations</h3>
+      <ul class="small muted" style="line-height:1.7"><li>Re-expands upper-level nodes in every iteration.</li><li>Not optimal when action costs differ; use uniform-cost search for varying costs.</li><li>Depth limits need careful handling in graphs with cycles (use path-cycle checking or a suitable graph-search variant).</li></ul>
+    </div>
+    <p class="small muted"><b>Notation:</b> b = branching factor; d = depth of the shallowest goal. Some references express the space bound as O(d) for a tree with constant branching factor; O(bd) is the common general form.</p>
+  </section>
+</main>
+<footer>Iterative Deepening Search · Interactive algorithm workbench</footer>
+</div>
+<script>
+const defaultTree = {
+  A:{depth:0,x:350,y:38,children:['B','C']},
+  B:{depth:1,x:205,y:125,children:['D','E']},
+  C:{depth:1,x:495,y:125,children:['F','G']},
+  D:{depth:2,x:125,y:225,children:[]},
+  E:{depth:2,x:285,y:225,children:[]},
+  F:{depth:2,x:415,y:225,children:[]},
+  G:{depth:2,x:575,y:225,children:[]}
+};
+let tree = JSON.parse(JSON.stringify(defaultTree));
+let edges = Object.entries(tree).flatMap(([p,n])=>n.children.map(c=>[p,c]));
+let treeWidth=700, treeHeight=330, treeZoom=1;
+function applyTreeZoom(){
+  const svg=$('treeSvg');
+  svg.style.width=(treeWidth*treeZoom)+'px';
+  svg.style.height=(treeHeight*treeZoom)+'px';
+  svg.style.minHeight=(treeHeight*treeZoom)+'px';
+  $('zoomLevel').textContent=Math.round(treeZoom*100)+'%';
+}
+function fitTreeToScreen(){
+  const wrap=$('treePanel').querySelector('.tree-wrap');
+  const expanded=$('treePanel').classList.contains('expanded');
+  const width=Math.max(220,wrap.clientWidth-24);
+  // In the normal view, fit the complete tree to the available width.
+  // In expanded view, also constrain it to the available viewport height.
+  const height=expanded ? Math.max(180,window.innerHeight-230) : treeHeight;
+  treeZoom=Math.max(.1,Math.min(1,width/treeWidth,height/treeHeight));
+  applyTreeZoom();
+}
+function updateGoalOptions(preferred){
+  const select=$('goalSelect'); select.innerHTML='';
+  Object.keys(tree).forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;select.appendChild(option);});
+  select.value=tree[preferred]?preferred:Object.keys(tree).at(-1);
+}
+function generateTree(levels){
+  const names=Array.from({length:(2**levels)-1},(_,i)=>i<26?String.fromCharCode(65+i):'N'+(i+1));
+  tree={}; treeWidth=Math.max(700,2**(levels-1)*92); treeHeight=Math.max(330,(levels-1)*110+90);
+  names.forEach((name,i)=>{
+    const depth=Math.floor(Math.log2(i+1));
+    const firstAtDepth=2**depth-1, position=i-firstAtDepth, slots=2**depth;
+    const x=(position+0.5)*(treeWidth/slots), y=42+depth*110;
+    const left=2*i+1,right=2*i+2;
+    tree[name]={depth,x,y,children:[left,right].filter(child=>child<names.length).map(child=>names[child])};
+  });
+  edges=Object.entries(tree).flatMap(([parent,node])=>node.children.map(child=>[parent,child]));
+  $('treeSvg').setAttribute('viewBox',`0 0 ${treeWidth} ${treeHeight}`);
+  treeZoom=1; applyTreeZoom();
+  updateGoalOptions(names[names.length-1]);
+}
+function restoreDefaultTree(){
+  tree=JSON.parse(JSON.stringify(defaultTree)); treeWidth=700; treeHeight=330;
+  edges=Object.entries(tree).flatMap(([parent,node])=>node.children.map(child=>[parent,child]));
+  $('treeSvg').setAttribute('viewBox','0 0 700 330'); treeZoom=1; $('treeSvg').style.width='100%'; $('treeSvg').style.height='auto'; $('treeSvg').style.minHeight='250px'; $('zoomLevel').textContent='100%';
+  updateGoalOptions('G');
+}
+const algorithmCode = `Algorithm: Iterative Deepening Search (IDS)
+
+Input: Graph, start node, goal node, maximum depth
+Output: Success if the goal is found; otherwise Failure
+
+1. for limit = 0 to maximum depth:
+2.     result = DepthLimitedSearch(start, goal, limit)
+3.     if result is Success:
+4.         return Success
+5. return Failure
+
+Procedure DepthLimitedSearch(node, goal, remainingDepth):
+1. if node = goal:
+2.     return Success
+3. if remainingDepth = 0:
+4.     return Cutoff        // Do not expand this node
+5. for each child of node, from left to right:
+6.     result = DepthLimitedSearch(child, goal, remainingDepth - 1)
+7.     if result is Success:
+8.         return Success
+9. return Failure`;
+const javaCode = `import java.util.*;\n\npublic class IDS {\n    static boolean depthLimitedSearch(\n        Map<String, List<String>> graph,\n        String node, String goal, int limit) {\n\n        if (node.equals(goal)) return true;\n        if (limit == 0) return false;\n\n        for (String child : graph.getOrDefault(\n                node, Collections.emptyList())) {\n            if (depthLimitedSearch(\n                    graph, child, goal, limit - 1)) {\n                return true;\n            }\n        }\n        return false;\n    }\n\n    static boolean iterativeDeepeningSearch(\n        Map<String, List<String>> graph,\n        String start, String goal, int maxDepth) {\n\n        for (int depth = 0; depth <= maxDepth; depth++) {\n            if (depthLimitedSearch(\n                    graph, start, goal, depth)) {\n                System.out.println("Goal found at depth " + depth);\n                return true;\n            }\n        }\n        return false;\n    }\n}`;
+const pythonCode = `def depth_limited_search(graph, node, goal, limit):\n    if node == goal:\n        return True\n    if limit == 0:\n        return False\n\n    for child in graph.get(node, []):\n        if depth_limited_search(\n                graph, child, goal, limit - 1):\n            return True\n    return False\n\ndef iterative_deepening_search(\n        graph, start, goal, max_depth):\n    for depth in range(max_depth + 1):\n        if depth_limited_search(\n                graph, start, goal, depth):\n            print("Goal found at depth", depth)\n            return True\n    return False`;
+let events=[], index=0, timer=null, found=false, visitedTotal=0, iterations=0, currentLimit=0, lang='java';
+const $ = id => document.getElementById(id);
+function buildEvents(){
+  events=[]; iterations=0; const goal=$('goalSelect').value; const max=Math.max(...Object.values(tree).map(node=>node.depth));
+  let total=0, solved=false;
+  for(let limit=0;limit<=max && !solved;limit++){
+    iterations++;
+    function dls(node,remaining,path){
+      if(solved) return;
+      total++; events.push({type:'visit',node,limit,remaining,detail:`Visit ${node} at depth ${tree[node].depth} (limit ${limit}).`});
+      if(node===goal){ solved=true; events.push({type:'found',node,limit,detail:`Goal ${goal} found at depth ${tree[node].depth}!`}); return; }
+      if(remaining===0){ events.push({type:'cutoff',node,limit,detail:`Depth limit reached at ${node}; do not expand its children.`}); return; }
+      for(const child of tree[node].children){ dls(child,remaining-1,path.concat(child)); if(solved) return; }
+    }
+    dls('A',limit,['A']);
+    if(!solved && limit<max) events.push({type:'iteration',node:'A',limit,detail:`No goal found with limit ${limit}. Increase the limit to ${limit+1} and restart at A.`});
+  }
+  if(!solved) events.push({type:'fail',node:'A',limit:max,detail:`Goal ${goal} was not found in this tree.`});
+  visitedTotal=total; found=solved;
+}
+function renderTree(active=null){
+  const svg=$('treeSvg'); svg.innerHTML='';
+  edges.forEach(([p,c])=>{const a=tree[p],b=tree[c]; const line=document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1',a.x);line.setAttribute('y1',a.y+19);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y-19);line.setAttribute('class','edge');svg.appendChild(line);});
+  Object.entries(tree).forEach(([name,n])=>{
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g'); let cls='node';
+    if(events.slice(0,index).some(e=>e.node===name && (e.type==='visit'||e.type==='found'))) cls+=' visited';
+    if(active===name) cls+=' current';
+    if(found && events.slice(0,index).some(e=>e.node===name&&e.type==='found')) cls='node found';
+    g.setAttribute('class',cls); const c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r',22);g.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',n.x);t.setAttribute('y',n.y+1);if(name.length>2)t.setAttribute('font-size','10');t.textContent=name;g.appendChild(t);svg.appendChild(g);
+  });
+  const goalLabel=document.createElementNS('http://www.w3.org/2000/svg','text');goalLabel.setAttribute('x',treeWidth-18);goalLabel.setAttribute('y',treeHeight-12);goalLabel.setAttribute('fill','currentColor');goalLabel.setAttribute('font-size','12');goalLabel.setAttribute('text-anchor','end');goalLabel.textContent='Goal: '+$('goalSelect').value;svg.appendChild(goalLabel);
+}
+function render(){
+  const e=events[index-1]; const active=e&&['visit','found'].includes(e.type)?e.node:null;
+  renderTree(active);
+  $('iterationPill').textContent=`Iteration ${e?Math.min(e.limit+1,iterations):1} · Limit ${e?e.limit:0}`;
+  $('expandedMetric').textContent=events.slice(0,index).filter(x=>x.type==='visit').length;
+  $('iterationMetric').textContent=e?e.limit+1:0;
+  $('depthMetric').textContent=e?e.limit:'—';
+  $('traceCount').textContent=`${index} / ${events.length} events`;
+  if(!e){$('statusTitle').textContent='Ready to search';$('statusText').textContent='Press Play or Next step to begin with depth limit 0.';}
+  else if(e.type==='found'){$('statusTitle').textContent='Goal found!';$('statusText').textContent=e.detail;}
+  else if(e.type==='fail'){$('statusTitle').textContent='Search finished';$('statusText').textContent=e.detail;}
+  else if(e.type==='iteration'){$('statusTitle').textContent='Increase depth limit';$('statusText').textContent=e.detail;}
+  else if(e.type==='cutoff'){$('statusTitle').textContent='Depth cutoff';$('statusText').textContent=e.detail;}
+  else {$('statusTitle').textContent='Exploring node '+e.node;$('statusText').textContent=e.detail;}
+  const log=$('log'); log.innerHTML='';
+  if(!index) log.innerHTML='<div class="muted small">Your search events will appear here.</div>';
+  events.slice(0,index).forEach((item,i)=>{const div=document.createElement('div');div.className='log-item';const n=document.createElement('span');n.className='n';n.textContent=(i+1)+'.';const s=document.createElement('span');s.textContent=item.detail;div.append(n,s);log.appendChild(div);});
+  log.scrollTop=log.scrollHeight;
+  $('stepBtn').disabled=index>=events.length;
+}
+function stop(){if(timer){clearInterval(timer);timer=null;} $('playBtn').textContent='▶ Play';}
+function step(){if(index<events.length){index++;render();} if(index>=events.length)stop();}
+function reset(){stop();buildEvents();index=0;render();}
+$('playBtn').addEventListener('click',()=>{if(timer){stop();return;} if(index>=events.length)reset(); $('playBtn').textContent='Ⅱ Pause';timer=setInterval(step,850);});
+$('stepBtn').addEventListener('click',()=>{stop();step();});
+$('resetBtn').addEventListener('click',reset);
+$('goalSelect').addEventListener('change',reset);
+$('expandTreeBtn').addEventListener('click',()=>{
+  const expanded=$('treePanel').classList.toggle('expanded');
+  document.body.classList.toggle('tree-expanded',expanded);
+  $('expandTreeBtn').textContent=expanded?'✕ Close':'⛶ Expand';
+  $('expandTreeBtn').setAttribute('aria-expanded',String(expanded));
+  if(expanded) fitTreeToScreen(); else {treeZoom=1;applyTreeZoom();$('treeSvg').style.width='100%';$('treeSvg').style.height='auto';$('treeSvg').style.minHeight='250px';}
+});
+ $('zoomInBtn').addEventListener('click',()=>{treeZoom=Math.min(2,treeZoom+.1);applyTreeZoom();});
+ $('zoomOutBtn').addEventListener('click',()=>{treeZoom=Math.max(.1,treeZoom-.1);applyTreeZoom();});
+ $('fitTreeBtn').addEventListener('click',fitTreeToScreen);
+ window.addEventListener('resize',()=>{if($('treePanel').classList.contains('expanded'))fitTreeToScreen();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('treePanel').classList.contains('expanded'))$('expandTreeBtn').click();});
+$('customTreeToggle').addEventListener('change',()=>{
+  $('customTreeOptions').hidden=!$('customTreeToggle').checked;
+  if($('customTreeToggle').checked) generateTree(+$('treeLevels').value); else restoreDefaultTree();
+  reset();
+});
+$('treeLevels').addEventListener('change',()=>{if($('customTreeToggle').checked){generateTree(+$('treeLevels').value);reset();}});
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');lang=btn.dataset.lang;$('codeBlock').textContent=lang==='algorithm'?algorithmCode:lang==='java'?javaCode:pythonCode;}));
+$('codeBlock').textContent=algorithmCode;
+reset();
+</script>
+</body>
+</html>
